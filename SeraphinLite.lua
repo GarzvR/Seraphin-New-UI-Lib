@@ -129,25 +129,45 @@ function Seraphin.CreateWindow(config)
     pcall(function() protectGui(ScreenGui) end)
     if not ScreenGui.Parent then ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui") end
 
-    -- Main Frame
+    -- Main Frame (Glassmorphism effect)
     local Main = Instance.new("Frame")
     Main.Name = "Main"
     Main.Size = UDim2.new(0, 520, 0, 380)
     Main.Position = UDim2.new(0.5, 0, 0.5, 0)
     Main.AnchorPoint = Vector2.new(0.5, 0.5)
     Main.BackgroundColor3 = THEME.Background
+    Main.BackgroundTransparency = 0.15
     Main.BorderSizePixel = 0
     Main.Parent = ScreenGui
     
+    -- Startup animation - start hidden
+    Main.Size = UDim2.new(0, 480, 0, 340)
+    Main.BackgroundTransparency = 1
+    
     local MainCorner = Instance.new("UICorner")
-    MainCorner.CornerRadius = UDim.new(0, 10)
+    MainCorner.CornerRadius = UDim.new(0, 12)
     MainCorner.Parent = Main
     
     local MainStroke = Instance.new("UIStroke")
     MainStroke.Color = THEME.Border
-    MainStroke.Transparency = 0.5
+    MainStroke.Transparency = 0.3
     MainStroke.Thickness = 1
     MainStroke.Parent = Main
+    
+    -- Subtle inner glow for glass effect
+    local InnerGlow = Instance.new("Frame")
+    InnerGlow.Size = UDim2.new(1, 0, 0, 60)
+    InnerGlow.BackgroundColor3 = Color3.new(1, 1, 1)
+    InnerGlow.BackgroundTransparency = 0.97
+    InnerGlow.BorderSizePixel = 0
+    InnerGlow.Parent = Main
+    local GlowCorner = Instance.new("UICorner")
+    GlowCorner.CornerRadius = UDim.new(0, 12)
+    GlowCorner.Parent = InnerGlow
+    local GlowGrad = Instance.new("UIGradient")
+    GlowGrad.Rotation = 90
+    GlowGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1)})
+    GlowGrad.Parent = InnerGlow
 
     -- TopBar
     local TopBar = Instance.new("Frame")
@@ -192,12 +212,44 @@ function Seraphin.CreateWindow(config)
         return btn
     end
 
+    -- Close button with animation
     createBtn("rbxassetid://6031094678", UDim2.new(1, -28, 0.5, 0), function()
-        ScreenGui:Destroy()
+        -- Close animation
+        TweenService:Create(Main, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 480, 0, 340),
+            BackgroundTransparency = 1
+        }):Play()
+        for _, child in ipairs(Main:GetDescendants()) do
+            if child:IsA("GuiObject") then
+                TweenService:Create(child, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+            end
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                TweenService:Create(child, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
+            end
+            if child:IsA("ImageLabel") or child:IsA("ImageButton") then
+                TweenService:Create(child, TweenInfo.new(0.2), {ImageTransparency = 1}):Play()
+            end
+        end
+        task.delay(0.3, function() ScreenGui:Destroy() end)
     end)
     
+    -- Minimize button with animation
+    local isMinimized = false
     createBtn("rbxassetid://71686683787518", UDim2.new(1, -54, 0.5, 0), function()
-        Main.Visible = not Main.Visible
+        isMinimized = not isMinimized
+        if isMinimized then
+            TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Size = UDim2.new(0, 480, 0, 340),
+                BackgroundTransparency = 1
+            }):Play()
+            task.delay(0.3, function() Main.Visible = false end)
+        else
+            Main.Visible = true
+            TweenService:Create(Main, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 520, 0, 380),
+                BackgroundTransparency = 0.15
+            }):Play()
+        end
     end)
 
     -- Separator
@@ -735,6 +787,18 @@ function Seraphin.CreateWindow(config)
             ClickBtn.Text = ""
             ClickBtn.Parent = TFrame
             ClickBtn.MouseButton1Click:Connect(function() SetState(not toggled) end)
+            
+            -- Hover animations
+            ClickBtn.MouseEnter:Connect(function()
+                TweenService:Create(TFrame, TweenInfo.new(0.15), {BackgroundColor3 = THEME.SurfaceHover}):Play()
+                TweenService:Create(TS, TweenInfo.new(0.15), {Transparency = 0.4}):Play()
+                TweenService:Create(TBtn, TweenInfo.new(0.15), {Size = UDim2.new(0, 38, 0, 19)}):Play()
+            end)
+            ClickBtn.MouseLeave:Connect(function()
+                TweenService:Create(TFrame, TweenInfo.new(0.15), {BackgroundColor3 = THEME.Surface}):Play()
+                TweenService:Create(TS, TweenInfo.new(0.15), {Transparency = 0.7}):Play()
+                TweenService:Create(TBtn, TweenInfo.new(0.15), {Size = UDim2.new(0, 36, 0, 18)}):Play()
+            end)
 
             return {Frame = TFrame, SetState = SetState}
         end
@@ -1199,22 +1263,55 @@ function Seraphin.CreateWindow(config)
     OpenBtn.Size = UDim2.new(0, 44, 0, 44)
     OpenBtn.Position = UDim2.new(0, 20, 0, 20)
     OpenBtn.BackgroundColor3 = THEME.Surface
-    OpenBtn.BackgroundTransparency = 0.3
+    OpenBtn.BackgroundTransparency = 0.2
     OpenBtn.Image = logo
     OpenBtn.Parent = ScreenGui
 
     local OBC = Instance.new("UICorner")
-    OBC.CornerRadius = UDim.new(0, 8)
+    OBC.CornerRadius = UDim.new(0, 10)
     OBC.Parent = OpenBtn
 
     local OBS = Instance.new("UIStroke")
     OBS.Color = THEME.Border
-    OBS.Transparency = 0.6
+    OBS.Transparency = 0.5
     OBS.Parent = OpenBtn
+
+    -- Open button hover effects
+    OpenBtn.MouseEnter:Connect(function()
+        TweenService:Create(OpenBtn, TweenInfo.new(0.2), {Size = UDim2.new(0, 48, 0, 48), BackgroundTransparency = 0.1}):Play()
+        TweenService:Create(OBS, TweenInfo.new(0.2), {Transparency = 0.2}):Play()
+    end)
+    OpenBtn.MouseLeave:Connect(function()
+        TweenService:Create(OpenBtn, TweenInfo.new(0.2), {Size = UDim2.new(0, 44, 0, 44), BackgroundTransparency = 0.2}):Play()
+        TweenService:Create(OBS, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
+    end)
 
     makeDraggable(OpenBtn, OpenBtn)
     OpenBtn.MouseButton1Click:Connect(function()
-        Main.Visible = not Main.Visible
+        if Main.Visible then
+            isMinimized = true
+            TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Size = UDim2.new(0, 480, 0, 340),
+                BackgroundTransparency = 1
+            }):Play()
+            task.delay(0.3, function() Main.Visible = false end)
+        else
+            isMinimized = false
+            Main.Visible = true
+            TweenService:Create(Main, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 520, 0, 380),
+                BackgroundTransparency = 0.15
+            }):Play()
+        end
+    end)
+
+    -- Startup Animation
+    task.spawn(function()
+        task.wait(0.1)
+        TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 520, 0, 380),
+            BackgroundTransparency = 0.15
+        }):Play()
     end)
 
     return Window
